@@ -2,7 +2,7 @@
 
 > Deterministic A2A risk validation as a LangChain `BaseTool`. **Integrate in under 5 minutes.**
 
-**Parent repo:** https://github.com/Shxnque/Quesen-sib
+**Developer portal:** https://senueren.co.za/quesen · **Source:** https://github.com/Shxnque/quesen
 **Doctrine:** governance and product decisions live in the parent repo's `DOCTRINE.md`. This package is a distribution channel.
 
 ---
@@ -62,4 +62,4 @@ All three are `langchain_core.tools.BaseTool` subclasses with structured Pydanti
 - **Ecosystem neutrality.** Depends on `langchain-core` only, not on any specific LLM provider.
 - **Fail-closed.** Timeouts surface as tool errors; recommended agent policy: treat as `SKIP`.
 
-MIT license. Extracted from `Shxnque/Quesen-sib` `sdks/langchain/`.
+MIT license. See [`senueren.co.za/quesen`](https://senueren.co.za/quesen) for canonical documentation.

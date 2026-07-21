@@ -4,7 +4,7 @@ LangChain / LangGraph BaseTool wrappers around the Quesen Python SDK.
 Every tool is a thin, deterministic wrapper: no prompt tuning, no state,
 no LLM in the loop. Same input in → same input out (up to the request_id).
 
-Doctrine anchors (parent Shxnque/Quesen-sib DOCTRINE.md):
+Doctrine anchors (see https://senueren.co.za/quesen for public design principles):
 - §2 Determinism preserved.
 - §11 Ecosystem neutrality: depends on langchain-core (not langchain-openai etc.).
 - Fail-closed: SDK errors surface unchanged so the caller decides policy.
