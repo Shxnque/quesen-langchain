@@ -2,8 +2,8 @@
 
 > Deterministic A2A risk validation as a LangChain `BaseTool`. **Integrate in under 5 minutes.**
 
+**Status:** v0.2.0 · tracks Quesen engine v1.10.0 · receipt provenance forwarded in the raw envelope.
 **Developer portal:** https://senueren.co.za/quesen · **Source:** https://github.com/Shxnque/quesen
-**Doctrine:** governance and product decisions live in the parent repo's `DOCTRINE.md`. This package is a distribution channel.
 
 ---
 
@@ -15,7 +15,7 @@ pip install quesen-langchain
 pip install git+https://github.com/Shxnque/quesen-langchain.git
 ```
 
-Brings `quesen-sdk` and `langchain-core` with it. No LLM lock-in.
+Brings `quesen-sdk>=0.2.0` and `langchain-core` with it. No LLM lock-in.
 
 ---
 
@@ -35,11 +35,26 @@ print(agent.invoke([HumanMessage("Should I ape into a 1-day-old token with 4 sca
 
 ---
 
+## Receipt provenance (v1.10, tracked in v0.2.0)
+
+`QuesenValidateTool._run(...)` returns the raw response dict verbatim from the
+underlying `quesen-sdk` client. When talking to a v1.10.0+ engine that dict
+includes two additional fields:
+
+- `input_snapshot_hash` — 64-char SHA-256 hex over the canonical request payload.
+- `commit_sha` — 40-char git SHA of the engine ruleset live at decision time (or `"unknown"`).
+
+Both flow through unchanged for downstream LangGraph nodes to consume, log, or
+verify. See the [developer portal API reference](https://github.com/Shxnque/quesen/blob/main/docs/api-reference.md#receipt-provenance-v110)
+for the field contract.
+
+---
+
 ## What ships
 
 | Tool | Wraps | Purpose |
 |---|---|---|
-| `QuesenValidateTool` | `POST /validate` | Deterministic PROCEED/REVIEW/SKIP verdict |
+| `QuesenValidateTool` | `POST /validate` | Deterministic PROCEED/REVIEW/SKIP verdict (carries v1.10 provenance) |
 | `QuesenSimulateTool` | `POST /simulate` | Free counterfactual (test the model without spending a call) |
 | `QuesenReportTool` | `POST /report` | Post-decision outcome feedback (v1.1 schema) |
 
@@ -61,5 +76,6 @@ All three are `langchain_core.tools.BaseTool` subclasses with structured Pydanti
 - **Determinism.** No prompt-tuning, no randomness in the wrapper.
 - **Ecosystem neutrality.** Depends on `langchain-core` only, not on any specific LLM provider.
 - **Fail-closed.** Timeouts surface as tool errors; recommended agent policy: treat as `SKIP`.
+- **Provenance forwarded.** The raw dict returned to the LangChain runtime carries `input_snapshot_hash` and `commit_sha` unchanged, so downstream nodes can pin the ruleset.
 
 MIT license. See [`senueren.co.za/quesen`](https://senueren.co.za/quesen) for canonical documentation.
