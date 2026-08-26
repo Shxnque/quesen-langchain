@@ -1,9 +1,35 @@
 # Quesen — LangChain / LangGraph Tool
 
-> Deterministic A2A risk validation as a LangChain `BaseTool`. **Integrate in under 5 minutes.**
+> Deterministic **Agent Firewall** + A2A risk validation as LangChain `BaseTool`s. **Integrate in under 5 minutes.**
 
-**Status:** v0.2.0 · tracks Quesen engine v1.10.0 · receipt provenance forwarded in the raw envelope.
+**Status:** v0.3.0 · tracks Quesen engine v1.10.0 (TSC v2 firewall) · requires `quesen-sdk>=0.4.1`.
 **Developer portal:** https://senueren.co.za/quesen · **Source:** https://github.com/Shxnque/quesen
+
+---
+
+## Agent Firewall (30-second, no signup)
+
+```python
+from quesen_langchain import QuesenFirewallTool
+
+# sandbox=True self-serves a free key against the hosted engine.
+firewall = QuesenFirewallTool(
+    base_url="https://web-production-aa5ba.up.railway.app",
+    sandbox=True,
+)
+
+# Give it to any LangChain/LangGraph agent, or call directly:
+verdict = firewall._run(
+    agent="my-agent", action="send_data",
+    target="https://paste.evil.example", data_class="secret",
+)
+print(verdict["decision"])                       # 'BLOCK'
+print([r["code"] for r in verdict["reasons"]])   # ['EGRESS_SECRET_UNTRUSTED']
+```
+
+`action` accepts `send_data` / `tool_call` / `payment` (+ aliases). For production
+pass `api_key="sk_live_..."` instead of `sandbox=True`.
+
 
 ---
 

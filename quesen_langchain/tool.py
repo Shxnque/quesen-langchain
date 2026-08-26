@@ -24,7 +24,7 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 try:
-    from quesen_sdk import QuesenClient
+    from quesen_sdk import QuesenClient, QuesenFirewall
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
         "quesen-langchain requires `quesen-sdk`. Install with `pip install quesen-sdk`."
@@ -32,6 +32,23 @@ except ImportError as exc:  # pragma: no cover
 
 
 # --------------------- Input schemas ---------------------
+
+class _FirewallInput(BaseModel):
+    """Describe the high-risk action the agent is about to take."""
+    action: str = Field(
+        default="tool_call",
+        description="tool_call | send_data | payment (friendly aliases accepted)",
+    )
+    agent: Optional[str] = Field(default=None, max_length=256)
+    target: Optional[str] = Field(default=None, max_length=512)
+    data_class: Optional[Any] = Field(
+        default=None,
+        description="For send_data: e.g. 'secret' | 'pii' | ['secret','pii']",
+    )
+    capability_class: Optional[str] = Field(default=None, description="read|write|network|exec|financial|admin|comms|filesystem|other")
+    granted_scopes: Optional[list] = None
+    requested_scopes: Optional[list] = None
+    client_request_id: Optional[str] = Field(default=None, max_length=128)
 
 class _ValidateInput(BaseModel):
     domain_age_days: Optional[int] = Field(default=None, ge=0)
@@ -67,6 +84,7 @@ class _BaseQuesenTool(BaseTool):
     api_key: Optional[str] = None
     timeout: float = 5.0
     retries: int = 2
+    sandbox: bool = False  # mint a free sandbox key on first use if no api_key
 
     _client: Optional[QuesenClient] = None  # populated lazily
 
@@ -78,10 +96,47 @@ class _BaseQuesenTool(BaseTool):
                 timeout=self.timeout,
                 retries=self.retries,
             )
+            if self.sandbox and not self._client.api_key:
+                self._client.create_sandbox_key()
         return self._client
 
 
 # --------------------- Concrete tools ---------------------
+
+class QuesenFirewallTool(_BaseQuesenTool):
+    """Agent firewall (TSC v2): deterministic PASS / REVIEW / BLOCK / SKIP + audit
+    receipt for a high-risk action, BEFORE it crosses a trust boundary.
+
+    Secret/credential egress to an untrusted destination is deterministically
+    BLOCKed; unauthorized privilege grants go to REVIEW. Requires an engine with
+    `QUESEN_TSC_V2_ENABLED=true` (route `POST /tsc/validate`)."""
+
+    name: str = "quesen_firewall"
+    description: str = (
+        "Agent firewall. Call BEFORE any high-risk action (sending data out, a "
+        "tool/capability invocation, or a payment). Returns a deterministic "
+        "PASS/REVIEW/BLOCK/SKIP decision plus reason codes and an audit receipt. "
+        "Use action='send_data' with data_class='secret' to gate exfiltration."
+    )
+    args_schema: Type[BaseModel] = _FirewallInput
+
+    def _run(self, **kwargs: Any) -> Dict[str, Any]:
+        fw = QuesenFirewall(client=self._get_client())
+        d = fw.check(
+            agent=kwargs.get("agent"),
+            action=kwargs.get("action") or "tool_call",
+            target=kwargs.get("target"),
+            data_class=kwargs.get("data_class"),
+            capability_class=kwargs.get("capability_class"),
+            granted_scopes=kwargs.get("granted_scopes"),
+            requested_scopes=kwargs.get("requested_scopes"),
+            client_request_id=kwargs.get("client_request_id"),
+        )
+        return d.raw
+
+    async def _arun(self, **kwargs: Any) -> Dict[str, Any]:  # pragma: no cover
+        return self._run(**kwargs)
+
 
 class QuesenValidateTool(_BaseQuesenTool):
     """Deterministic PROCEED / REVIEW / SKIP verdict for an opportunity."""

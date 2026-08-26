@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] — 2026-08-27 · Agent Firewall tool (TSC v2)
+
+### Added
+- **`QuesenFirewallTool`** — LangChain `BaseTool` wrapping the Quesen Agent
+  Firewall (`POST /tsc/validate`). Deterministic PASS/REVIEW/BLOCK/SKIP + audit
+  receipt before a high-risk action (data egress / tool call / payment).
+- `sandbox=True` mints a free sandbox key on first use (no signup) so the tool
+  works out of the box against the hosted engine.
+
+### Changed
+- Bumped `quesen-sdk` dependency floor to `>=0.4.1` (firewall + onboarding).
+
 ## [0.2.0] — 2026-07-31 · Tracks engine v1.10.0 receipt provenance
 
 ### Changed
