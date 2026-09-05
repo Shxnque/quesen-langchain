@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.5.0] — 2026-09-05 · SDK 0.6.0 parity · offline verdict replay
+
+### Added
+- **`verify_recompute=True`** on `QuesenFirewallTool` — REPLAY the verdict offline
+  (via `quesen-sdk` `replay`/`verify_receipt(recompute_request=...)`) against the exact
+  context and merge `receipt_recomputed` + `receipt_verification` into the tool output.
+  The direct answer to "locally replay the verdict" (BEA criticism-ledger C-003 / C-004).
+
+### Changed
+- Bumped `quesen-sdk` dependency floor to `>=0.6.0`.
+
+## [0.4.0] — 2026-09-05 · SDK 0.5.0 parity · enforcement + verifiable receipts
+
+### Added
+- **`quesen_guard(...)`** — fail-closed enforcement decorator. Wraps
+  `quesen_sdk.QuesenFirewall.guard` so any Python callable (a tool's function, a
+  LangGraph node) executes ONLY on a PASS verdict; otherwise `TscBlocked` is
+  raised and the body never runs. Verdict is attached as `.last_decision`.
+- **Independent receipt verification** on `QuesenFirewallTool`: set
+  `verify_receipts=True` (and optionally `engine_public_key_hex=...`) to merge a
+  client-side `receipt_verified` + `receipt_verification` into the returned
+  envelope (structural, plus optional Ed25519 via `quesen-sdk[verify]`).
+
+### Changed
+- Bumped `quesen-sdk` dependency floor to `>=0.5.0`.
+
 ## [0.3.0] — 2026-08-27 · Agent Firewall tool (TSC v2)
 
 ### Added

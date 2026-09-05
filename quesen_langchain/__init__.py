@@ -1,6 +1,7 @@
 """Quesen LangChain integration — official BaseTool wrappers on top of quesen-sdk.
 
-Includes the Agent Firewall tool (TSC v2) plus the legacy A2A risk tools.
+Includes the Agent Firewall tool (TSC v2), the legacy A2A risk tools, and
+(v0.4.0) the fail-closed enforcement decorator `quesen_guard`.
 """
 
 from .tool import (
@@ -9,8 +10,9 @@ from .tool import (
     QuesenSimulateTool,
     QuesenValidateTool,
 )
+from .guard import quesen_guard
 
-__version__ = "0.3.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "__version__",
@@ -18,4 +20,5 @@ __all__ = [
     "QuesenValidateTool",
     "QuesenSimulateTool",
     "QuesenReportTool",
+    "quesen_guard",
 ]

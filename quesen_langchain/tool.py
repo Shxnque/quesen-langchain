@@ -24,10 +24,10 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 try:
-    from quesen_sdk import QuesenClient, QuesenFirewall
+    from quesen_sdk import QuesenClient, QuesenFirewall, verify_receipt
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "quesen-langchain requires `quesen-sdk`. Install with `pip install quesen-sdk`."
+        "quesen-langchain requires `quesen-sdk>=0.5.0`. Install with `pip install quesen-sdk`."
     ) from exc
 
 
@@ -85,6 +85,9 @@ class _BaseQuesenTool(BaseTool):
     timeout: float = 5.0
     retries: int = 2
     sandbox: bool = False  # mint a free sandbox key on first use if no api_key
+    verify_receipts: bool = False  # independently check receipts client-side
+    verify_recompute: bool = False  # additionally REPLAY the verdict offline (C-003/C-004)
+    engine_public_key_hex: Optional[str] = None  # for optional Ed25519 verification
 
     _client: Optional[QuesenClient] = None  # populated lazily
 
@@ -99,6 +102,21 @@ class _BaseQuesenTool(BaseTool):
             if self.sandbox and not self._client.api_key:
                 self._client.create_sandbox_key()
         return self._client
+
+    def _verify(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        """If verify_receipts is on, merge an independent client-side receipt
+        check (structural, plus optional Ed25519) into the returned envelope."""
+        if not self.verify_receipts:
+            return raw
+        v = verify_receipt(raw, public_key_hex=self.engine_public_key_hex)
+        return {
+            **raw,
+            "receipt_verified": v.signature_valid if v.signed else v.ok,
+            "receipt_verification": {
+                "ok": v.ok, "signed": v.signed,
+                "signature_valid": v.signature_valid, "reason": v.reason,
+            },
+        }
 
 
 # --------------------- Concrete tools ---------------------
@@ -122,7 +140,7 @@ class QuesenFirewallTool(_BaseQuesenTool):
 
     def _run(self, **kwargs: Any) -> Dict[str, Any]:
         fw = QuesenFirewall(client=self._get_client())
-        d = fw.check(
+        call = dict(
             agent=kwargs.get("agent"),
             action=kwargs.get("action") or "tool_call",
             target=kwargs.get("target"),
@@ -132,7 +150,24 @@ class QuesenFirewallTool(_BaseQuesenTool):
             requested_scopes=kwargs.get("requested_scopes"),
             client_request_id=kwargs.get("client_request_id"),
         )
-        return d.raw
+        if self.verify_recompute:
+            # Replay the verdict OFFLINE against the exact context and bind the
+            # result into the envelope (BEA criticism-ledger C-003 / C-004).
+            ctx = fw.build_context(**call)
+            d = self._get_client().validate_tsc(ctx)
+            v = verify_receipt(d.raw, recompute_request=ctx,
+                               public_key_hex=self.engine_public_key_hex)
+            return {
+                **d.raw,
+                "receipt_recomputed": v.recomputed,
+                "receipt_verification": {
+                    "ok": v.ok, "signed": v.signed,
+                    "signature_valid": v.signature_valid,
+                    "recomputed": v.recomputed, "reason": v.reason,
+                },
+            }
+        d = fw.check(**call)
+        return self._verify(d.raw)
 
     async def _arun(self, **kwargs: Any) -> Dict[str, Any]:  # pragma: no cover
         return self._run(**kwargs)
