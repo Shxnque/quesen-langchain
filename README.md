@@ -14,7 +14,7 @@ from quesen_langchain import QuesenFirewallTool
 
 # sandbox=True self-serves a free key against the hosted engine.
 firewall = QuesenFirewallTool(
-    base_url="https://web-production-aa5ba.up.railway.app",
+    base_url="https://web-production-3df26.up.railway.app",
     sandbox=True,
 )
 
